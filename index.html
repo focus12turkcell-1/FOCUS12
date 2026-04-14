@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Turkcell Focus 12 Performance Dashboard</title>
+    
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#001a35">
+    <link rel="apple-touch-icon" href="image_3.png">
+
+    <link rel="icon" type="image/png" sizes="192x192" href="icon-192x192.png">
+
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <style>
+        :root {
+            --t-blue: #001a35; --t-yellow: #FFCB05; --t-light: #0047BB;
+            --bg: #0f0f0f; --card-bg: #1a1a1a; --text: #ffffff;
+            --up-green: #00ff00; --down-red: #ff3333; --border: #333; --kpi-bg: #2d2d2d;
+            --sidebar-bg: #001a35; --input-bg: #2d2d2d; --input-text: white;
+            --header-bg: #001a35;
+        }
+        [data-theme="light"] {
+            --bg: #f4f7f6; --card-bg: #ffffff; --text: #1a1a1a;
+            --border: #ddd; --kpi-bg: #f8f9fa;
+            --sidebar-bg: #ffffff; --input-bg: #ffffff; --input-text: #1a1a1a;
+            --header-bg: #ffffff;
+        }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); margin: 0; display: flex; flex-direction: row; transition: all 0.3s ease; font-size: 14px; }
+
+        /* Logo Kontrolü - En Sağlam Yöntem */
+        .sidebar-logo { width: 105%; max-width: 400px; margin: 0 auto 25px ; display: block; transition: opacity 0.3s ease; }
+        
+        /* Varsayılan (Gece Modu): Koyu logo gizli, açık logo görünür */
+        .logo-light { display: none !important; }
+        .logo-dark { display: block !important; }
+
+        /* Aydınlık Mod: Koyu logo görünür, açık logo gizli */
+        [data-theme="light"] .logo-light { display: block !important; }
+        [data-theme="light"] .logo-dark { display: none !important; }
+
+        .sidebar {
+            width: 280px; background: var(--sidebar-bg); height: 100vh; color: var(--text);
+            padding: 20px; position: fixed; box-sizing: border-box; overflow-y: auto;
+            border-right: 1px solid var(--border); z-index: 1000; transition: all 0.3s ease;
+        }
+        [data-theme="light"] .sidebar { color: #1a1a1a; }
+        .sidebar h2 { color: var(--t-yellow); border-bottom: 2px solid var(--t-yellow); padding-bottom: 8px; margin-bottom: 20px; font-size: 1rem; }
+        label { display: block; margin: 12px 0 4px; font-weight: bold; font-size: 0.75rem; color: #888; text-transform: uppercase; }
+
+        select, .search-box {
+            width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border);
+            margin-bottom: 12px; font-size: 0.85rem; background: var(--input-bg);
+            color: var(--input-text); cursor: pointer; outline: none; transition: all 0.3s ease;
+        }
+
+        .theme-btn { width: 100%; padding: 10px; border-radius: 6px; border: none; background: var(--t-yellow); color: #000; font-weight: bold; cursor: pointer; margin-top: 15px; font-size: 0.8rem; }
+
+        .content { margin-left: 280px; padding: 25px; width: calc(100% - 280px); box-sizing: border-box; }
+
+        .main-header {
+            background: var(--header-bg); color: var(--t-yellow); padding: 15px 20px; border-radius: 10px;
+            margin-bottom: 20px; border-left: 6px solid var(--t-yellow); box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            display: flex; justify-content: space-between; align-items: center;
+            transition: background 0.3s ease;
+        }
+        .header-titles h1 { margin: 0; font-size: 1.4rem; letter-spacing: 0.5px; text-transform: uppercase; }
+        .header-titles .sub-report-title { margin: 0; font-size: 0.9rem; color: white; opacity: 0.8; font-weight: normal; margin-top: 4px; }
+        
+        [data-theme="light"] .header-titles .sub-report-title,
+        [data-theme="light"] .update-info { color: #1a1a1a; opacity: 1; }
+
+        .update-info { color: white; font-size: 0.75rem; font-weight: bold; opacity: 0.7; text-align: right; }
+        #lastUpdate { color: var(--t-yellow); }
+
+        .card { background: var(--card-bg); border-radius: 10px; padding: 18px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); margin-bottom: 20px; border: 1px solid var(--border); transition: background 0.3s; }
+        .kpi-grid { display: grid; grid-template-columns: 1fr 1.5fr 1fr; gap: 10px; margin-top: 12px; }
+        .kpi-box { background: var(--kpi-bg); padding: 12px; border-radius: 8px; text-align: center; border: 1px solid var(--border); }
+        .kpi-box span { font-size: 0.6rem; color: #888; text-transform: uppercase; font-weight: bold; margin-bottom: 3px; display: block;}
+        .kpi-box h3 { margin: 0; color: var(--text); font-size: 1.1rem; display: flex; align-items: center; justify-content: center; gap: 5px; }
+
+        .trend-pill { font-size: 0.7rem; font-weight: 900; padding: 2px 5px; border-radius: 4px; margin-left: 4px; }
+        .trend-up { color: #000 !important; background: var(--up-green); }
+        .trend-down { color: #fff !important; background: var(--down-red); }
+
+        .chart-container { position: relative; height: 340px; width: 100%; margin-top: 12px; }
+        .performance-list { list-style: none; padding: 0; margin: 15px 0 0; border-top: 1px solid var(--border); overflow-y: auto; max-height: 250px; }
+        .list-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 5px; border-bottom: 1px solid var(--border); font-size: 0.8rem; color: var(--text); }
+        .val-num { font-weight: bold; color: var(--t-light); }
+
+        .staff-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+        .staff-table th { text-align: left; padding: 10px; border-bottom: 2px solid var(--border); color: var(--t-light); }
+        .staff-table td { padding: 8px; border-bottom: 1px solid var(--border); color: var(--text); }
+        .staff-table tbody tr { cursor: pointer; transition: background 0.1s; }
+        .staff-table tbody tr:hover { background: rgba(255, 203, 5, 0.1); }
+
+        @media screen and (max-width: 1024px) {
+            body { flex-direction: column; }
+            .sidebar { width: 100%; height: auto; position: relative; border-right: none; }
+            .content { margin-left: 0; width: 100%; padding: 15px; }
+            .main-header { flex-direction: column; text-align: center; gap: 10px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="sidebar">
+    <img src="logo_dark.png" alt="Turkcell Logo Dark" class="sidebar-logo logo-dark">
+    <img src="logo_light.png" alt="Turkcell Logo Light" class="sidebar-logo logo-light">
+    
+    <h2>FİLTRELEME</h2>
+    <label>BÖLGE FİLTRESİ</label>
+    <select id="regionSelect" onchange="runDashboard()"><option value="Hepsi">Tüm Türkiye</option></select>
+
+    <label>SIRALAMA KRİTERİ</label>
+    <select id="metricFilter" onchange="updateTop10Chart()">
+        <option value="-1">Toplam Puan</option>
+        <option value="0">Bütçe Değişim</option>
+        <option value="1">Yenileme</option>
+        <option value="2">Fesih İbra</option>
+        <option value="3">Rollout</option>
+        <option value="4">Sabit Artış</option>
+        <option value="5">Genel İşlem</option>
+        <option value="6">5G & Fiber Kurulum</option>
+        <option value="7">Teminat İade</option>
+        <option value="8">Gecikme Faizi</option>
+        <option value="9">Biyometrik İmza</option>
+        <option value="10">Şikayet Kapama</option>
+        <option value="11">Tekrarlama</option>
+    </select>
+
+    <label>PERSONEL SEÇİMİ</label>
+    <select id="personSelect" onchange="updateView()"></select>
+
+    <button class="theme-btn" id="themeToggle" onclick="toggleTheme()">GÜNDÜZ MODUNA GEÇ</button>
+</div>
+
+<div class="content">
+    <div class="main-header">
+        <div class="header-titles">
+            <h1>FOCUS 12 Analiz Paneli</h1>
+            <div id="dynamicReportTitle" class="sub-report-title">Yükleniyor...</div>
+        </div>
+        <div class="update-info">GÜNCELLEME TARİHİ: <br><span id="lastUpdate">-</span></div>
+    </div>
+
+    <div class="card">
+        <h3 id="top10Title" style="color:var(--t-light)">TÜRKİYE - TOPLAM PUAN SIRALAMASI</h3>
+        <div class="chart-container"><canvas id="top10Chart"></canvas></div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+        <div class="card" id="personCard">
+            <h3 id="personTitle" style="color:var(--t-light)">Kişi Karnesi</h3>
+            <div class="kpi-grid" id="pKpis"></div>
+            <div class="chart-container"><canvas id="radarChart"></canvas></div>
+            <ul class="performance-list" id="trendDetailList"></ul>
+        </div>
+        <div class="card">
+            <h3 id="regionTitle" style="color:var(--t-light)">Bölge Karnesi</h3>
+            <div class="kpi-grid" id="rKpis"></div>
+            <div class="chart-container"><canvas id="regionRadarChart"></canvas></div>
+            <ul class="performance-list" id="regTrendDetailList"></ul>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3 style="color:var(--t-light)">Personel Sıralama Listesi (Detay için isme tıklayın)</h3>
+        <input type="text" id="staffSearch" class="search-box" placeholder="İsim veya Bölge Ara..." onkeyup="searchTable()">
+        <table class="staff-table" id="staffTable">
+            <thead><tr><th>Bölge</th><th>İsim Soyisim</th><th>Puan</th><th>Sıra</th></tr></thead>
+            <tbody></tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(err => console.log('SW hatası:', err));
+  });
+}
+
+let YENI = [], ESKI = [];
+let radarChart, regionRadarChart, top10Chart;
+const labels = ['Bütçe Değ.', 'Yenileme', 'Fesih İbra', 'Rollout', 'Sabit Art.', 'Genel İşlem', '5G & Fiber', 'Teminat İade', 'Gecikme F.', 'Biyo. İmza', 'Şikayet K.', 'Tekrarlama'];
+const focusMaxWeights = [15, 10, 8, 15, 5, 10, 10, 7, 5, 5, 5, 5];
+
+const CURRENT_DATA_FILE = "ŞUBAT'26.csv"; 
+
+function toggleTheme() {
+    const body = document.body;
+    const btn = document.getElementById('themeToggle');
+    if (body.getAttribute('data-theme') === 'light') {
+        body.removeAttribute('data-theme');
+        btn.innerText = 'GÜNDÜZ MODUNA GEÇ';
+    } else {
+        body.setAttribute('data-theme', 'light');
+        btn.innerText = 'GECE MODUNA GEÇ';
+    }
+    runDashboard();
+}
+
+async function init() {
+    const reportTitle = CURRENT_DATA_FILE.replace('.csv', '').replace('.xlsx', '') + " Raporu";
+    document.getElementById('dynamicReportTitle').innerText = reportTitle;
+
+    const fetchCSV = url => new Promise(res => Papa.parse(url + '?v=' + Date.now(), {download: true, header: true, complete: d => res(d.data)}));
+    
+    const [d1, d2] = await Promise.all([fetchCSV(CURRENT_DATA_FILE), fetchCSV("OCAK'26.csv")]);
+
+    const map = d => d.filter(r => r['KİRALAMA SORUMLUSU']).map(r => ({
+        name: r['KİRALAMA SORUMLUSU'].trim(),
+        region: r['BÖLGE'] ? r['BÖLGE'].trim() : 'Bilinmiyor',
+        score: parseFloat(r['Puan'] || 0),
+        breakdown: [
+            parseFloat(r['BÜTÇE DEĞİŞİM']||0), parseFloat(r['YENİLEME']||0), parseFloat(r['FESİH İBRA']||0),
+            parseFloat(r['ROLLOUT']||0), parseFloat(r['SABİT ARTIŞ']||0), parseFloat(r['GENEL İŞLEM']||0),
+            parseFloat(r['5G KURULUM - FİBER SİTE']||0), parseFloat(r['TEMİNAT İADE']||0), parseFloat(r['GECİKME FAİZİ']||0),
+            parseFloat(r['BİYOMETRİK İMZA']||0), parseFloat(r['MÜŞTERİ ŞİKAYETLERİ KAPAMA']||0), parseFloat(r['TEKRARLAMA']||0)
+        ]
+    }));
+
+    YENI = map(d1); ESKI = map(d2);
+
+    const rSel = document.getElementById('regionSelect');
+    [...new Set(YENI.map(x => x.region))].sort().forEach(r => {
+        let o = document.createElement('option'); o.value = r; o.text = r; rSel.add(o);
+    });
+
+    initCharts();
+    runDashboard();
+
+    const now = new Date();
+    document.getElementById('lastUpdate').innerText = now.toLocaleDateString('tr-TR') + ' ' + now.toLocaleTimeString('tr-TR', {hour: '2-digit', minute:'2-digit'});
+}
+
+function initCharts() {
+    const common = { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } };
+    const rdrOptions = {
+        scales: { r: { suggestMax: 20, ticks: { display: false }, grid: { color: 'rgba(128,128,128,0.2)' } } },
+        ...common
+    };
+
+    const targetDataset = {
+        label: 'Hedef', data: focusMaxWeights,
+        backgroundColor: 'rgba(0, 71, 187, 0.1)', 
+        borderColor: 'rgba(0, 71, 187, 0.4)',     
+        borderDash: [5, 5], 
+        fill: true, 
+        pointRadius: 3,
+        pointHoverRadius: 6
+    };
+
+    top10Chart = new Chart(document.getElementById('top10Chart'), { type: 'bar', data: { labels: [], datasets: [{ data: [], backgroundColor: '#0047BB' }] }, options: { ...common, indexAxis: 'y' } });
+    radarChart = new Chart(document.getElementById('radarChart'), { type: 'radar', data: { labels: labels, datasets: [{ data: [], borderColor: '#FFCB05', backgroundColor: 'rgba(255,203,5,0.2)', borderWidth: 2 }, targetDataset] }, options: rdrOptions });
+    regionRadarChart = new Chart(document.getElementById('regionRadarChart'), { type: 'radar', data: { labels: labels, datasets: [{ data: [], borderColor: '#00ff00', backgroundColor: 'rgba(0,255,0,0.1)', borderWidth: 2 }, targetDataset] }, options: rdrOptions });
+}
+
+function selectFromTable(name, region) {
+    document.getElementById('regionSelect').value = region;
+    runDashboard();
+    document.getElementById('personSelect').value = name;
+    updateView();
+    document.getElementById('personCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function runDashboard() {
+    const reg = document.getElementById('regionSelect').value;
+    const pSel = document.getElementById('personSelect');
+    const filtered = reg === 'Hepsi' ? YENI : YENI.filter(x => x.region === reg);
+
+    pSel.innerHTML = '';
+    filtered.sort((a,b) => b.score - a.score).forEach(p => {
+        let o = document.createElement('option'); o.value = p.name; o.text = `${p.name} (${p.score.toFixed(2)})`; pSel.add(o);
+    });
+
+    updateTop10Chart();
+    updateRegionCard(reg);
+    updateView();
+    updateStaffTable();
+}
+
+function updateTop10Chart() {
+    const reg = document.getElementById('regionSelect').value;
+    const mIdx = parseInt(document.getElementById('metricFilter').value);
+    const mLab = document.getElementById('metricFilter').options[document.getElementById('metricFilter').selectedIndex].text;
+    const filtered = reg === 'Hepsi' ? YENI : YENI.filter(x => x.region === reg);
+    const sorted = [...filtered].sort((a,b) => (mIdx === -1 ? b.score - a.score : b.breakdown[mIdx] - a.breakdown[mIdx])).slice(0, 10);
+
+    const scores = sorted.map(x => (mIdx === -1 ? x.score : x.breakdown[mIdx]));
+    const minV = Math.floor(Math.min(...scores) - 1);
+
+    top10Chart.data.labels = sorted.map(x => x.name);
+    top10Chart.data.datasets[0].data = scores;
+    top10Chart.options.scales = { x: { min: (minV > 0 ? minV : 0) } };
+    
+    document.getElementById('top10Title').innerText = (reg === 'Hepsi' ? 'TÜRKİYE' : reg.toUpperCase()) + " - " + mLab.toUpperCase() + " SIRALAMASI";
+    top10Chart.update();
+}
+
+function updateRegionCard(rName) {
+    const d = rName === 'Hepsi' ? YENI : YENI.filter(x => x.region === rName);
+    const oldD = rName === 'Hepsi' ? ESKI : ESKI.filter(x => x.region === rName);
+    const avg = arr => arr.length ? (arr.reduce((sum, b) => sum + b.score, 0) / arr.length) : 0;
+    const curA = avg(d), prevA = avg(oldD), diff = (curA - prevA).toFixed(2);
+
+    const regionAvgs = [...new Set(YENI.map(x => x.region))].map(r => ({ name: r, avg: avg(YENI.filter(x => x.region === r)) })).sort((a,b) => b.avg - a.avg);
+    const rRank = regionAvgs.findIndex(x => x.name === rName) + 1;
+
+    document.getElementById('regionTitle').innerText = `${rName === 'Hepsi' ? 'Türkiye' : rName} Bölge Karnesi`;
+    document.getElementById('rKpis').innerHTML = `
+        <div class="kpi-box"><span>BÖLGE</span><h3>${rName === 'Hepsi' ? 'TR' : rName}</h3></div>
+        <div class="kpi-box"><span>PUAN / TREND</span><h3>${curA.toFixed(2)} <span class="trend-pill ${diff>=0?'trend-up':'trend-down'}">${diff>=0?'▲ +':'▼ '}${diff}</span></h3></div>
+        <div class="kpi-box"><span>SIRALAMA</span><h3>${rName === 'Hepsi' ? '-' : rRank + ' / ' + regionAvgs.length}</h3></div>`;
+
+    const brk = [0,1,2,3,4,5,6,7,8,9,10,11].map(i => (d.reduce((a, b) => a + b.breakdown[i], 0) / d.length));
+    const oldBrk = [0,1,2,3,4,5,6,7,8,9,10,11].map(i => (oldD.length ? (oldD.reduce((a, b) => a + (b.breakdown ? b.breakdown[i] : 0), 0) / oldD.length) : 0));
+    
+    regionRadarChart.data.datasets[0].data = brk;
+    regionRadarChart.update();
+
+    const list = document.getElementById('regTrendDetailList');
+    list.innerHTML = '';
+    brk.forEach((v, i) => {
+        const ds = (v - oldBrk[i]).toFixed(2);
+        list.innerHTML += `<li class="list-item"><span>${labels[i]}</span><div><span class="val-num">${v.toFixed(2)} / ${focusMaxWeights[i]}</span><span class="trend-pill ${ds>=0?'trend-up':'trend-down'}">${ds>=0?'+':''}${ds}</span></div></li>`;
+    });
+}
+
+function updateView() {
+    const n = document.getElementById('personSelect').value;
+    const p = YENI.find(x => x.name === n);
+    const old = ESKI.find(x => x.name === n) || { score: 0, breakdown: new Array(12).fill(0) };
+    if(!p) return;
+
+    const pRank = [...YENI].sort((a,b) => b.score - a.score).findIndex(x => x.name === n) + 1;
+    const diff = (p.score - old.score).toFixed(2);
+
+    document.getElementById('personTitle').innerText = `${p.name} Karnesi`;
+    document.getElementById('pKpis').innerHTML = `
+        <div class="kpi-box"><span>BÖLGE</span><h3>${p.region}</h3></div>
+        <div class="kpi-box"><span>PUAN / TREND</span><h3>${p.score.toFixed(2)} <span class="trend-pill ${diff>=0?'trend-up':'trend-down'}">${diff>=0?'▲ +':'▼ '}${diff}</span></h3></div>
+        <div class="kpi-box"><span>GENEL SIRALAMA</span><h3>${pRank} / ${YENI.length}</h3></div>`;
+
+    radarChart.data.datasets[0].data = p.breakdown;
+    radarChart.update();
+
+    const list = document.getElementById('trendDetailList');
+    list.innerHTML = '';
+    p.breakdown.forEach((v, i) => {
+        const ds = (v - (old.breakdown ? old.breakdown[i] : 0)).toFixed(2);
+        list.innerHTML += `<li class="list-item"><span>${labels[i]}</span><div><span class="val-num">${v.toFixed(2)} / ${focusMaxWeights[i]}</span><span class="trend-pill ${ds>=0?'trend-up':'trend-down'}">${ds>=0?'+':''}${ds}</span></div></li>`;
+    });
+}
+
+function updateStaffTable() {
+    const tbody = document.querySelector('#staffTable tbody');
+    tbody.innerHTML = '';
+    YENI.sort((a,b)=>b.score-a.score).forEach((p, i) => {
+        const tr = document.createElement('tr');
+        tr.onclick = () => selectFromTable(p.name, p.region);
+        tr.innerHTML = `<td>${p.region}</td><td>${p.name}</td><td class="val-num">${p.score.toFixed(2)}</td><td>${i+1}</td>`;
+        tbody.appendChild(tr);
+    });
+}
+
+function searchTable() {
+    const input = document.getElementById('staffSearch').value.toUpperCase();
+    const rows = document.querySelectorAll('#staffTable tbody tr');
+    rows.forEach(r => r.style.display = r.innerText.toUpperCase().includes(input) ? '' : 'none');
+}
+
+window.onload = init;
+</script>
+</body>
+</html>
