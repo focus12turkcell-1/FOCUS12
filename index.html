@@ -1,5 +1,5 @@
-<!DOCTYPE html> 
-<!-- 194 yeni veri seti, 215 eski veri seti -->
+<!DOCTYPE html>
+<!-- 216 yeni veri seti, 254 eski veri seti -->
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
@@ -99,6 +99,10 @@
         .staff-table tbody tr { cursor: pointer; transition: background 0.1s; }
         .staff-table tbody tr:hover { background: rgba(255, 203, 5, 0.1); }
 
+        /* Guide Overlay CSS */
+        #guideOverlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:9999; backdrop-filter:blur(10px); overflow-y:auto; cursor:pointer; }
+        .modal-content-wrapper { position:relative; width:95%; max-width:1100px; margin:20px auto; text-align: center; }
+
         @media screen and (max-width: 1024px) {
             body { flex-direction: column; }
             .sidebar { width: 100%; height: auto; position: relative; border-right: none; }
@@ -138,6 +142,16 @@
     <select id="personSelect" onchange="updateView()"></select>
 
     <button class="theme-btn" id="themeToggle" onclick="toggleTheme()">GÜNDÜZ MODUNA GEÇ</button>
+
+    <!-- KILAVUZ BUTONLARI EKİ -->
+    <div style="margin-top: 20px; display: flex; flex-direction: column; gap: 8px;">
+        <button class="theme-btn" style="background: #0047BB; color: white;" onclick="openGuide('setup')">⚙️ KURULUM KILAVUZU</button>
+        <button class="theme-btn" style="background: #FFCB05; color: black;" onclick="openGuide('usage')">📖 KULLANIM KILAVUZU</button>
+    </div>
+
+    <div style="margin-top: 20px; font-size: 0.7rem; color: #888; text-align: center; border-top: 1px solid var(--border); padding-top: 10px;">
+        İletişim: focus12turkcell@gmail.com
+    </div>
 </div>
 
 <div class="content">
@@ -179,6 +193,14 @@
     </div>
 </div>
 
+<!-- KILAVUZ MODAL YAPISI EKİ -->
+<div id="guideOverlay" onclick="closeGuide()">
+    <div class="modal-content-wrapper">
+        <div style="color:white; margin-bottom: 10px; font-weight: bold; font-family: sans-serif;">KAPATMAK İÇİN TIKLAYIN [X]</div>
+        <img id="guideImg" src="" style="width:100%; border-radius:12px; box-shadow:0 0 30px rgba(255,203,5,0.3); border:2px solid #444;">
+    </div>
+</div>
+
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
@@ -192,6 +214,23 @@ const labels = ['Bütçe Değ.', 'Yenileme', 'Fesih İbra', 'Rollout', 'Sabit Ar
 const focusMaxWeights = [15, 10, 8, 15, 5, 10, 10, 7, 5, 5, 5, 5];
 
 const CURRENT_DATA_FILE = "MART'26.csv"; 
+
+// REHBER FONKSIYONLARI EKİ
+function openGuide(type) {
+    const guideImg = document.getElementById('guideImg');
+    const overlay = document.getElementById('guideOverlay');
+    
+    // Görseller klasörde olduğu için doğrudan isimle çağrılır
+    guideImg.src = (type === 'setup') ? "FOCUS 12 KURULUM.png" : "FOCUS 12 KULLANIM KILAVUZU.png";
+    
+    overlay.style.display = "block";
+    document.body.style.overflow = "hidden";
+}
+
+function closeGuide() {
+    document.getElementById('guideOverlay').style.display = "none";
+    document.body.style.overflow = "auto";
+}
 
 function toggleTheme() {
     const body = document.body;
@@ -249,17 +288,18 @@ function initCharts() {
 
     const targetDataset = {
         label: 'Hedef', data: focusMaxWeights,
-        backgroundColor: 'rgba(0, 71, 187, 0.1)', 
-        borderColor: 'rgba(0, 71, 187, 0.4)',     
+        backgroundColor: 'rgba(0, 71, 187, 0.08)', 
+        borderColor: 'rgba(0, 71, 187, 0.3)',      
         borderDash: [5, 5], 
         fill: true, 
-        pointRadius: 3,
-        pointHoverRadius: 6
+        pointRadius: 0
     };
 
     top10Chart = new Chart(document.getElementById('top10Chart'), { type: 'bar', data: { labels: [], datasets: [{ data: [], backgroundColor: '#0047BB' }] }, options: { ...common, indexAxis: 'y' } });
-    radarChart = new Chart(document.getElementById('radarChart'), { type: 'radar', data: { labels: labels, datasets: [{ data: [], borderColor: '#FFCB05', backgroundColor: 'rgba(255,203,5,0.2)', borderWidth: 2 }, targetDataset] }, options: rdrOptions });
-    regionRadarChart = new Chart(document.getElementById('regionRadarChart'), { type: 'radar', data: { labels: labels, datasets: [{ data: [], borderColor: '#00ff00', backgroundColor: 'rgba(0,255,0,0.1)', borderWidth: 2 }, targetDataset] }, options: rdrOptions });
+    
+    // Şeffaflık ve görünüm ayarları kılavuza göre optimize edildi
+    radarChart = new Chart(document.getElementById('radarChart'), { type: 'radar', data: { labels: labels, datasets: [{ data: [], borderColor: '#FFCB05', backgroundColor: 'rgba(255,203,5,0.45)', borderWidth: 2 }, targetDataset] }, options: rdrOptions });
+    regionRadarChart = new Chart(document.getElementById('regionRadarChart'), { type: 'radar', data: { labels: labels, datasets: [{ data: [], borderColor: '#00ff00', backgroundColor: 'rgba(0,255,0,0.25)', borderWidth: 2 }, targetDataset] }, options: rdrOptions });
 }
 
 function selectFromTable(name, region) {
