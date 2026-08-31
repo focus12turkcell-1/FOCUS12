@@ -229,7 +229,7 @@ let radarChart, regionRadarChart, top10Chart;
 const labels = ['Bütçe Değ.', 'Yenileme', 'Fesih İbra', 'Rollout', 'Sabit Art.', 'Genel İşlem', '5G & Fiber', 'Teminat İade', 'Gecikme F.', 'Biyo. İmza', 'Şikayet K.', 'Tekrarlama'];
 const focusMaxWeights = [15, 10, 8, 15, 5, 10, 10, 7, 5, 5, 5, 5];
 
-const CURRENT_DATA_FILE = "HAZİRAN'26.csv"; 
+const CURRENT_DATA_FILE = "TEMMUZ'26.csv"; 
 
 // ZOOM VE SÜRÜKLEME SİSTEMİ (KILAVUZLAR İÇİN)
 let scale = 1, panning = false, pointX = 0, pointY = 0, start = { x: 0, y: 0 }, lastDist = 0;
@@ -318,7 +318,7 @@ async function init() {
     document.getElementById('dynamicReportTitle').innerText = reportTitle;
 
     const fetchCSV = url => new Promise(res => Papa.parse(url + '?v=' + Date.now(), {download: true, header: true, complete: d => res(d.data)}));
-    const [d1, d2] = await Promise.all([fetchCSV(CURRENT_DATA_FILE), fetchCSV("MAYIS'26.csv")]);
+    const [d1, d2] = await Promise.all([fetchCSV(CURRENT_DATA_FILE), fetchCSV("HAZİRAN'26.csv")]);
 
     const map = d => d.filter(r => r['KİRALAMA SORUMLUSU']).map(r => ({
         name: r['KİRALAMA SORUMLUSU'].trim(),
